@@ -1,164 +1,164 @@
-let authToken = '';
+// Mock user data
+let currentUser = null;
 
-document.addEventListener('DOMContentLoaded', () => {
-    const loginForm = document.getElementById('login-form');
-    const registerForm = document.getElementById('register-form');
-    const showRegisterButton = document.getElementById('show-register');
-    const showLoginButton = document.getElementById('show-login');
-    const taskContainer = document.getElementById('task-container');
-    const authContainer = document.getElementById('auth-container');
-    const createTaskBtn = document.getElementById('create-task-btn');
-    const taskModal = document.getElementById('task-modal');
-    const closeTaskModal = document.getElementById('close-task-modal');
-    const taskList = document.getElementById('task-list');
-    const logoutButton = document.getElementById('logout');
-    const searchBar = document.getElementById('search-bar');
-    const taskForm = document.getElementById('task-form');
+// Task data
+let tasks = [];
 
-    // Show register form
-    showRegisterButton.addEventListener('click', () => {
-        loginForm.style.display = 'none';
-        registerForm.style.display = 'block';
-        document.getElementById('auth-header').textContent = 'Register';
-    });
+// Check if a user is logged in
+function isLoggedIn() {
+    return currentUser !== null;
+}
 
-    // Show login form
-    showLoginButton.addEventListener('click', () => {
-        loginForm.style.display = 'block';
-        registerForm.style.display = 'none';
-        document.getElementById('auth-header').textContent = 'Login';
-    });
+// Show the register page
+function showRegisterPage() {
+    document.getElementById('registerPage').style.display = 'block';
+    document.getElementById('loginPage').style.display = 'none';
+}
 
-    // Register a new user
-    registerForm.addEventListener('submit', async (event) => {
-        event.preventDefault();
-        const username = document.getElementById('reg-username').value;
-        const password = document.getElementById('reg-password').value;
+// Show the login page
+function showLoginPage() {
+    document.getElementById('loginPage').style.display = 'block';
+    document.getElementById('registerPage').style.display = 'none';
+}
 
-        const response = await fetch('http://localhost:5000/api/auth/register', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password })
-        });
+// Handle user registration
+document.getElementById('registerForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    const username = document.getElementById('regUsername').value;
+    const password = document.getElementById('regPassword').value;
 
-        const data = await response.json();
-        alert(data.message);
-        if (response.ok) {
-            showLoginButton.click();
-        }
-    });
+    const user = { username, password };
+    localStorage.setItem('user', JSON.stringify(user));
 
-    // Login the user
-    loginForm.addEventListener('submit', async (event) => {
-        event.preventDefault();
-        const username = document.getElementById('username').value;
-        const password = document.getElementById('password').value;
-
-        const response = await fetch('http://localhost:5000/api/auth/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password })
-        });
-
-        const data = await response.json();
-        if (response.ok) {
-            authToken = data.token;
-            authContainer.style.display = 'none';
-            taskContainer.style.display = 'block';
-            loadTasks();
-        } else {
-            alert(data.message);
-        }
-    });
-
-    // Create new task
-    createTaskBtn.addEventListener('click', () => {
-        taskModal.style.display = 'block';
-    });
-
-    // Close task modal
-    closeTaskModal.addEventListener('click', () => {
-        taskModal.style.display = 'none';
-    });
-
-    taskForm.addEventListener('submit', async (event) => {
-        event.preventDefault();
-
-        const name = document.getElementById('task-name').value;
-        const description = document.getElementById('task-description').value;
-        const deadline = document.getElementById('task-deadline').value;
-        const priority = document.getElementById('task-priority').value;
-
-        const response = await fetch('http://localhost:5000/api/tasks', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${authToken}`
-            },
-            body: JSON.stringify({ name, description, deadline, priority })
-        });
-
-        const data = await response.json();
-        if (response.ok) {
-            loadTasks();
-            taskModal.style.display = 'none';
-        } else {
-            alert(data.message);
-        }
-    });
-
-    // Logout the user
-    logoutButton.addEventListener('click', () => {
-        authToken = '';
-        taskContainer.style.display = 'none';
-        authContainer.style.display = 'block';
-    });
-
-    // Load tasks
-    const loadTasks = async () => {
-        const response = await fetch('http://localhost:5000/api/tasks', {
-            headers: { 'Authorization': `Bearer ${authToken}` }
-        });
-
-        const tasks = await response.json();
-        displayTasks(tasks);
-    };
-
-    const displayTasks = (tasks) => {
-        taskList.innerHTML = '';
-        tasks.forEach(task => {
-            const taskElement = document.createElement('div');
-            taskElement.classList.add('task-item');
-            taskElement.innerHTML = `
-                <div>
-                    <strong>${task.name}</strong><br>
-                    <span>${task.description}</span><br>
-                    <span>Deadline: ${task.deadline}</span><br>
-                    <span>Priority: ${task.priority}</span>
-                </div>
-                <div>
-                    <button onclick="deleteTask('${task._id}')">Delete</button>
-                    <button onclick="editTask('${task._id}')">Edit</button>
-                </div>
-            `;
-            taskList.appendChild(taskElement);
-        });
-    };
-
-    // Delete task
-    window.deleteTask = async (taskId) => {
-        const response = await fetch(`http://localhost:5000/api/tasks/${taskId}`, {
-            method: 'DELETE',
-            headers: {
-                'Authorization': `Bearer ${authToken}`
-            }
-        });
-
-        const data = await response.json();
-        if (response.ok) {
-            loadTasks();
-        } else {
-            alert(data.message);
-        }
-    };
+    alert('Registration successful!');
+    showLoginPage();
 });
+
+// Handle user login
+document.getElementById('loginForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    const username = document.getElementById('loginUsername').value;
+    const password = document.getElementById('loginPassword').value;
+
+    const storedUser = JSON.parse(localStorage.getItem('user'));
+    if (storedUser && storedUser.username === username && storedUser.password === password) {
+        currentUser = storedUser;
+        loadTasks();
+        showTaskPage();
+    } else {
+        alert('Invalid login credentials');
+    }
+});
+
+// Show task management page
+function showTaskPage() {
+    document.getElementById('taskPage').style.display = 'block';
+    document.getElementById('loginPage').style.display = 'none';
+    document.getElementById('registerPage').style.display = 'none';
+}
+
+// Load tasks from localStorage
+function loadTasks() {
+    const tasksData = localStorage.getItem('tasks');
+    tasks = tasksData ? JSON.parse(tasksData) : [];
+    displayTasks();
+}
+
+// Display tasks
+function displayTasks() {
+    const taskList = document.getElementById('taskList');
+    taskList.innerHTML = '';
+
+    tasks.forEach((task, index) => {
+        const taskDiv = document.createElement('div');
+        taskDiv.className = 'task';
+
+        taskDiv.innerHTML = `
+            <h3>${task.title}</h3>
+            <p>${task.description}</p>
+            <p><strong>Deadline:</strong> ${task.deadline}</p>
+            <p><strong>Priority:</strong> ${task.priority}</p>
+            <button class="edit" onclick="editTask(${index})">Edit</button>
+            <button class="delete" onclick="deleteTask(${index})">Delete</button>
+        `;
+
+        taskList.appendChild(taskDiv);
+    });
+}
+
+// Create new task
+function showCreateTaskModal() {
+    document.getElementById('createTaskModal').style.display = 'block';
+}
+
+function closeTaskModal() {
+    document.getElementById('createTaskModal').style.display = 'none';
+}
+
+document.getElementById('taskForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    const title = document.getElementById('taskTitle').value;
+    const description = document.getElementById('taskDescription').value;
+    const deadline = document.getElementById('taskDeadline').value;
+    const priority = document.getElementById('taskPriority').value;
+
+    const task = { title, description, deadline, priority };
+    tasks.push(task);
+    localStorage.setItem('tasks', JSON.stringify(tasks));
+
+    displayTasks();
+    closeTaskModal();
+});
+
+// Edit task
+function editTask(index) {
+    const task = tasks[index];
+    document.getElementById('taskTitle').value = task.title;
+    document.getElementById('taskDescription').value = task.description;
+    document.getElementById('taskDeadline').value = task.deadline;
+    document.getElementById('taskPriority').value = task.priority;
+
+    tasks.splice(index, 1);
+    localStorage.setItem('tasks', JSON.stringify(tasks));
+
+    showCreateTaskModal();
+}
+
+// Delete task
+function deleteTask(index) {
+    tasks.splice(index, 1);
+    localStorage.setItem('tasks', JSON.stringify(tasks));
+    displayTasks();
+}
+
+// Search tasks
+function searchTasks() {
+    const searchQuery = document.getElementById('searchBar').value.toLowerCase();
+    const filteredTasks = tasks.filter(task => 
+        task.title.toLowerCase().includes(searchQuery) || 
+        task.description.toLowerCase().includes(searchQuery)
+    );
+    displayFilteredTasks(filteredTasks);
+}
+
+function displayFilteredTasks(filteredTasks) {
+    const taskList = document.getElementById('taskList');
+    taskList.innerHTML = '';
+
+    filteredTasks.forEach((task, index) => {
+        const taskDiv = document.createElement('div');
+        taskDiv.className = 'task';
+
+        taskDiv.innerHTML = `
+            <h3>${task.title}</h3>
+            <p>${task.description}</p>
+            <p><strong>Deadline:</strong> ${task.deadline}</p>
+            <p><strong>Priority:</strong> ${task.priority}</p>
+            <button class="edit" onclick="editTask(${index})">Edit</button>
+            <button class="delete" onclick="deleteTask(${index})">Delete</button>
+        `;
+
+        taskList.appendChild(taskDiv);
+    });
+        }
+        
